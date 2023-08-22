@@ -31,22 +31,22 @@ Each top-level group might include unique elements or sub-keys that are specific
     The `appBar` key allows API designers to create a custom bar located on the left of the CAVE app. Changing values within this key allows users to switch between viewing the different maps, dashboards, and kpi views, as well as opening panes.
 
 - #### `arcs`
-    The `arcs` group contains data that is typically used to visualize flows between two points on the "**Map**" view. Depending on the nature of the flows and the purpose of the visualization, the flows between two locations can be represented by a single arc (source and destination) or a sequence of arc segments representing a path
+    The `arcs` group contains data that is typically used to visualize flows between two points on the "**Map**" view. Depending on the nature of the flows and the purpose of the visualization, the flows between two locations can be represented by a single arc (source and destination) or a sequence of arc segments representing a path. The properties by which arcs are colored and shown/hidden are set in maps.
 
 - #### `dashboards`
     The `dashboards` key allows API designers to create custom dashboards for displaying charts and tables of statistics and kpi data. Editing values within this key allows for information and layout of the charts and tables to be specified, as well as whether the dashboards can be edited by the user.
 
 - #### `geos`
-    The `geos` group contains data that is typically used to visualize geographic areas on the "**Map**" view. Geos often represent districts, countries, states, provinces, or zip codes. The property by which geos are colored is set in maps
+    The `geos` group contains data that is typically used to visualize geographic areas on the "**Map**" view. Geos often represent districts, countries, states, provinces, or zip codes. The properties by which geos are colored and shown/hidden are set in maps.
 
 - #### `kpis`
     The `kpis` group contains all the KPI data that will be displayed on the "**KPI**" view. These are typically highly aggregated statistics calculated by the api. In general, KPIs are used to compare values across sessions and give a high level overview of output. Filters and aggregations will not affect `kpis`. The `kpis` group is also used to set which kpis are shown on the map
 
 - #### `maps`
-    This key group allows designers to specify information about the starting state of the map, as well as what node, arc, and geo types are displayed and what the arcs, nodes, and geos are sized and colored by. This group also controls what viewports can be easily jumped to by the user.
+    This group allows designers to specify information about the starting state of the map, as well as what node, arc, and geo types are visible or hidden, and what the arcs, nodes, and geos are sized and colored by. This group also controls what viewports can be easily jumped to by the user. Note that this group doesn't directly control the position of the map, which is instead set in the special group.
 
 - #### `nodes`
-    The `nodes` group contains data that is typically used to visualize single geographic locations in the "**Map**" view. Nodes often represent buildings such as warehouses, distribution centers, and stores.
+    The `nodes` group contains data that is typically used to visualize single geographic locations in the "**Map**" view. Nodes often represent buildings such as warehouses, distribution centers, and stores. The properties by which nodes are colored and shown/hidden are set in maps. Whether a node type is grouped is also set in the maps key.
 
 - #### `panes`
     The `panes` group controls the current state of all panes. Panes are constructs primarily used to place UI controls (toggles, text and number fields, sliders, etc.), as well as buttons to allow interaction with actionable data. Custom panes can be designed to enable users to tune up the parameters of a simulation, navigate through different case study scenarios, reset the state of a simulation, synchronize data or settings with other users, and so on. Note that panes are opened or closed through the `appBar` top-level key.
@@ -55,3 +55,4 @@ Each top-level group might include unique elements or sub-keys that are specific
     The `stats` group takes parameter data that can use its raw values to display in a dashboard view.
 
 - #### `special`
+    The special group allows the api to simulate button presses, and change local settings. This group is often used to execute commands such as "solve" or "reset", to open modals (often for arcs, nodes, and geos), or to move the position of the map.
