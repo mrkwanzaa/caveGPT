@@ -33,7 +33,8 @@ def query_model(messages):
     completion = openai.ChatCompletion.create(
         model=api_model,
         temperature=0.1,
-        messages=messages
+        messages=messages,
+        max_tokens=200,
     )
     return completion.choices[0].message.content
 
@@ -85,6 +86,14 @@ def find_mutation_path(chunks):
             return result
     return False
 
+def locate_path(path_string, top_level_key):
+    given_path = json.loads(path_string)
+    list_path = given_path['path'].split('.')
+    if list_path[0] != top_level_key:
+        list_path.insert(0, top_level_key)
+    given_path['path'] = list_path
+    return given_path
+
 # load docs
 texts = []
 docs_by_name = {}
@@ -99,10 +108,11 @@ for doc in os.listdir(docs_dir):
 command = input('Command: ')
 print('Finding top level key...')
 top_level_key = find_top_level_key(command)
-print('Chunking api')
+print('Chunking api...')
 api_chunks = chunk_into_messages(command, top_level_key)
-print('Finding mutation path')
-path = find_mutation_path(api_chunks)
+print('Finding mutation path...')
+result = find_mutation_path(api_chunks)
+path = locate_path(result, top_level_key)
 print(path)
 
 
