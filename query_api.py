@@ -4,6 +4,8 @@ import openai
 import json
 import configobj
 import tiktoken
+import asyncio
+from websockets.sync.client import connect
 from time import sleep
 
 # Setup env vars and constants
@@ -16,6 +18,17 @@ docs_dir = 'docs/'
 tokenizer_name = tiktoken.encoding_for_model(api_model)
 tokenizer = tiktoken.get_encoding(tokenizer_name.name)
 
+# load docs
+texts = []
+docs_by_name = {}
+
+for doc in os.listdir(docs_dir):
+    with open(docs_dir + doc, 'r') as f:
+        text = f.read()
+        texts.append(text)
+        docs_by_name[doc[0:-3]] = text
+
+# Define functions
 def tiktoken_len(text):
     tokens = tokenizer.encode(
         text,
@@ -24,10 +37,11 @@ def tiktoken_len(text):
     return len(tokens)
 
 def get_api():
-    state = ""
-    with open('state.json') as f:
-        state = f.read()
-    return state
+    with connect("ws://localhost:8000/ws/?user_token=e2ef08c6cfb1bda8cbcd6cf827572ab22052bc13") as websocket:
+        websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
+        for _ in range(4):
+            message = websocket.recv()
+    return message
 
 def query_model(messages):
     completion = openai.ChatCompletion.create(
@@ -52,13 +66,13 @@ def chunk_into_messages(command, top_level_key):
     def add_request_text(api_data):
         return '"""' + docs_by_name[top_level_key] + '""" \n\n' \
                     + api_data + '\n\nrequest: ' + command
-    state = get_api()
-    encoded_data = json.dumps(json.loads(state)[top_level_key])
+    state = json.loads(get_api())['data']
+    encoded_data = json.dumps(state[top_level_key])
     encoded_chunk = add_request_text(encoded_data)
     chunks = [None]
     if tiktoken_len(encoded_chunk) > max_tokens:
         max_size = True
-        key_dict = json.loads(state)[top_level_key]
+        key_dict =state[top_level_key]
         chunks[-1] = {i:key_dict[i] for i in key_dict if i!='data'}
         chunks[-1]['data'] = {}
         for key, value in key_dict['data'].items():
@@ -94,26 +108,17 @@ def locate_path(path_string, top_level_key):
     given_path['path'] = list_path
     return given_path
 
-# load docs
-texts = []
-docs_by_name = {}
-
-for doc in os.listdir(docs_dir):
-    with open(docs_dir + doc, 'r') as f:
-        text = f.read()
-        texts.append(text)
-        docs_by_name[doc[0:-3]] = text
-
-# accept command
-command = input('Command: ')
-print('Finding top level key...')
-top_level_key = find_top_level_key(command)
-print('Chunking api...')
-api_chunks = chunk_into_messages(command, top_level_key)
-print('Finding mutation path...')
-result = find_mutation_path(api_chunks)
-path = locate_path(result, top_level_key)
-print(path)
+if __name__ == '__main__':
+    # accept command
+    command = input('Command: ')
+    # print('Finding top level key...')
+    top_level_key = find_top_level_key(command)
+    print('Chunking api...')
+    api_chunks = chunk_into_messages(command, top_level_key)
+    print('Finding mutation path...')
+    result = find_mutation_path(api_chunks)
+    path = locate_path(result, top_level_key)
+    print(path)
 
 
 
