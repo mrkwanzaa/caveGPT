@@ -11,7 +11,7 @@ from time import sleep
 # Setup env vars and constants
 config = configobj.ConfigObj('.env')
 openai.api_key = config["OPENAI_API_KEY"]
-api_model = "gpt-4"
+api_model = "gpt-4-1106-preview"
 docs_dir = 'docs/'
 
 #Setup Tokenizer
@@ -48,7 +48,8 @@ def query_model(messages):
         model=api_model,
         temperature=0.1,
         messages=messages,
-        max_tokens=200,
+        # max_tokens=200,
+        response_format={"type": "json_object"}
     )
     return completion.choices[0].message.content
 
@@ -62,7 +63,7 @@ def find_top_level_key(command):
     return current_key
 
 def chunk_into_messages(command, top_level_key):
-    max_tokens = 7700
+    max_tokens = 100000
     def add_request_text(api_data):
         return '"""' + docs_by_name[top_level_key] + '""" \n\n' \
                     + api_data + '\n\nrequest: ' + command
@@ -92,7 +93,7 @@ def chunk_into_messages(command, top_level_key):
 def find_mutation_path(chunks):
     for data in chunks:
         result = query_model([
-            {"role": "system", "content": "Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```{\"path\": example.path.here, \"value\": value}```. If the user request isn't possible with the given data respond with 'Not possible'"},
+            {"role": "system", "content": "Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn't possible with the given data respond with 'Not possible'"},
             {"role": "user", "content": data},
             ]
         )
@@ -101,7 +102,8 @@ def find_mutation_path(chunks):
     return False
 
 def locate_path(path_string, top_level_key):
-    given_path = json.loads(path_string)
+    # cut off initial ```json and end ```
+    given_path = json.loads(path_string[7:-3])
     list_path = given_path['path'].split('.')
     if list_path[0] != top_level_key:
         list_path.insert(0, top_level_key)
