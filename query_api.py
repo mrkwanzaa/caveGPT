@@ -1,18 +1,21 @@
 # Imports and setup model
 import os
-import openai
+from openai import OpenAI
 import json
 import configobj
 import tiktoken
 import asyncio
 from websockets.sync.client import connect
 from time import sleep
+from pamda import pamda
+from cave_utils.api_utils.validator import Validator
 
 # Setup env vars and constants
 config = configobj.ConfigObj('.env')
-openai.api_key = config["OPENAI_API_KEY"]
 api_model = "gpt-4-1106-preview"
 docs_dir = 'docs/'
+client = OpenAI(api_key=config["OPENAI_API_KEY"])
+
 
 #Setup Tokenizer
 tokenizer_name = tiktoken.encoding_for_model(api_model)
@@ -37,37 +40,37 @@ def tiktoken_len(text):
     return len(tokens)
 
 def get_api():
-    with connect("ws://localhost:8000/ws/?user_token=e2ef08c6cfb1bda8cbcd6cf827572ab22052bc13") as websocket:
+    with connect("ws://localhost:8000/ws/?user_token=27774d407ebaeea295d3970d31a5b79b931f14f5") as websocket:
         websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
         for _ in range(4):
             message = websocket.recv()
     return message
 
-def query_model(messages):
-    completion = openai.ChatCompletion.create(
+def query_model(messages, json):
+    completion = client.chat.completions.create(
         model=api_model,
         temperature=0.1,
         messages=messages,
         # max_tokens=200,
-        response_format={"type": "json_object"}
+        response_format={"type": "json_object"} if json else None,
     )
     return completion.choices[0].message.content
 
 def find_top_level_key(command):
     result = query_model([
             {"role": "system", "content": "Using the given documentation delimited by triple quotes, respond to user requests with nothing but the name of the top-level key that must be edited in order to fufill the request surrounded by single quotes"},
-            {"role": "user", "content": '"""' + docs_by_name['topLevelInfo'] + '""" \n\n' + 'request: ' + command},
-        ]
+            {"role": "user", "content": '"""' + docs_by_name['index'] + '""" \n\n' + 'request: ' + command},
+        ], json=False
     )
     current_key = result.replace("'", '')
     return current_key
 
-def chunk_into_messages(command, top_level_key):
+def chunk_into_messages(command, top_level_key, api):
     max_tokens = 100000
     def add_request_text(api_data):
         return '"""' + docs_by_name[top_level_key] + '""" \n\n' \
                     + api_data + '\n\nrequest: ' + command
-    state = json.loads(get_api())['data']
+    state = api['data']
     encoded_data = json.dumps(state[top_level_key])
     encoded_chunk = add_request_text(encoded_data)
     chunks = [None]
@@ -95,15 +98,14 @@ def find_mutation_path(chunks):
         result = query_model([
             {"role": "system", "content": "Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn't possible with the given data respond with 'Not possible'"},
             {"role": "user", "content": data},
-            ]
+            ], json=True
         )
         if not 'Not possible' in result:
             return result
     return False
 
 def locate_path(path_string, top_level_key):
-    # cut off initial ```json and end ```
-    given_path = json.loads(path_string[7:-3])
+    given_path = json.loads(path_string)
     list_path = given_path['path'].split('.')
     if list_path[0] != top_level_key:
         list_path.insert(0, top_level_key)
@@ -113,14 +115,21 @@ def locate_path(path_string, top_level_key):
 if __name__ == '__main__':
     # accept command
     command = input('Command: ')
-    # print('Finding top level key...')
+    api = json.loads(get_api())
+    print('Finding top level key...')
     top_level_key = find_top_level_key(command)
+    print(top_level_key)
     print('Chunking api...')
-    api_chunks = chunk_into_messages(command, top_level_key)
+    api_chunks = chunk_into_messages(command, top_level_key, api)
     print('Finding mutation path...')
     result = find_mutation_path(api_chunks)
     path = locate_path(result, top_level_key)
     print(path)
+    print('Validating mutation')
+    muated_api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
+    validator = Validator(muated_api)
+    validator.log.print_logs()
+
 
 
 

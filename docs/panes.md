@@ -1,224 +1,56 @@
-## Panes
-Panes are constructs primarily used to place UI controls (toggles, text and number fields, sliders, etc.), as well as buttons to allow interaction with actionable data. Custom panes can be designed to enable users to tune up the parameters of a simulation, navigate through different case study scenarios, reset the state of a simulation, synchronize data or settings with other users, and so on.
+Panes serve as main containers for UI controls such as toggles, text
 
-Panes can be of different [`variant`](#pane-variant)s, so to keep the data structure examples simple and modular, you can examine each one at a time in the following switchables:
+and number fields, sliders, etc. They can also contain buttons that
+facilitate interaction with actionable data.
 
-<details>
-  <summary>App Settings pane</summary>
+The panes are located under the path **`panes`**.
 
-```py
-"appSettings": {
-    "variant": "appSettings",
-},
-```
-</details>
+Arguments:
 
-<details>
-  <summary>Options pane</summary>
+* **`data`**: `[str]` &rarr; The data to pass to `panes.data.*`.
+* **`paneState`**: `[dict]` &rarr;
+    * A dictionary of pane states per their location in the `appBar` object.
+    * **Accepted Values**:
+        * `"left"`: The state of a pane triggered from the left-side app bar.
+        * `"center"`: The pane state of a centered modal.
+        * `"right"`: The state of a pane triggered from the right-side app bar.
+    * **Note**: In the vast majority of use cases, the `paneState` dictionary is not relevant to the design of the CAVE App, as its primary purpose is to store temporary UI state during user interactions. Nevertheless, a CAVE App designer has the option to prepopulate it if required.
 
-```py
-"customPropsPane": {
-    "name": "Example Props Pane",
-    "props": {
-        "numericHeader": {
-            "name": "Numeric Props",
-            "type": "head",
-            "help": "Some help for numeric props",
-        },
-        "numericInputExample": {
-            "name": "Numeric Input Example",
-            "type": "num",
-            "value": 50,
-            "enabled": True,
-            "help": "Help for the numeric input example",
-            "maxValue": 100,
-            "minValue": 0,
-            "numberFormat": {
-                "precision": 0,
-                "unit": "units",
-            },
-        },
-        "numericSliderExample": {
-            "name": "Numeric Slider Example",
-            "type": "num",
-            "value": 50,
-            "enabled": True,
-            "variant": "slider",
-            "help": "Help for the numeric slider example",
-            "maxValue": 100,
-            "minValue": 0,
-        },
-        "miscHeader": {
-            "name": "Misc Props",
-            "type": "head",
-            "help": "Some help for miscelanous props",
-        },
-        "toggleInputExample": {
-            "name": "Toggle Input Example",
-            "type": "toggle",
-            "value": True,
-            "enabled": True,
-            "help": "Help for the toggle input example",
-        },
-        "buttonInputExample": {
-            "name": "Button Input Example (Creates an Error)",
-            "value": "Press Me!",
-            "type": "button",
-            "apiCommand": "test",
-            "enabled": True,
-            "help": "Press this button to create an error",
-        },
-        "textInputExample": {
-            "name": "Text Input Example",
-            "type": "text",
-            "value": "Example Text Here",
-            "enabled": True,
-            "help": "Help for the text input example",
-        },
-        "selectorHeader": {
-            "name": "Selection Props",
-            "type": "head",
-            "help": "Some help for Selection Props",
-        },
-        "dropdownItemExample": {
-            "name": "Dropdown Item Example",
-            "type": "selector",
-            "variant": "dropdown",
-            "value": ["option_c"],
-            "options": {
-                "option_a": {"name": "Option A"},
-                "option_b": {"name": "Option B"},
-                "option_c": {"name": "Option C"},
-            },
-            "enabled": True,
-            "help": "Select an option from the dropdown",
-        },
-    },
-    "layout": {
-        "type": "grid",
-        "numColumns": 2,
-        "numRows": "auto",
-        "data": {
-            "col1Row1": {
-                "type": "item",
-                "column": 1,
-                "row": 1,
-                "itemId": "numericHeader",
-            },
-            "col1Row2": {
-                "type": "item",
-                "column": 1,
-                "row": 2,
-                "itemId": "numericInputExample",
-            },
-            "col1Row3": {
-                "type": "item",
-                "column": 1,
-                "row": 3,
-                "itemId": "numericSliderExample",
-            },
-            "col2Row1": {
-                "type": "item",
-                "column": 2,
-                "row": 1,
-                "itemId": "miscHeader",
-            },
-            "col2Row2": {
-                "type": "item",
-                "column": 2,
-                "row": 2,
-                "itemId": "toggleInputExample",
-            },
-            "col2Row3": {
-                "type": "item",
-                "column": 2,
-                "row": 3,
-                "itemId": "buttonInputExample",
-            }
-        },
-    },
-    "variant": "options",
-},
-```
-</details>
+The pane data is located under the path **`panes.data.*`**.
 
-<details>
-  <summary>Context pane</summary>
+Arguments:
 
-```py
-"customContextPane": {
-    "name": "Example Context Pane",
-    "props": {
-        "numericContextProp": {
-            "type": "num",
-            "value": 100,
-            "enabled": True,
-            "help": "Numeric Context Prop Help",
-            "label": "%",
-            "variant": "slider",
-            "maxValue": 500,
-            "minValue": 0,
-            "selectableCategories": ["location", "sku"],
-        },
-    },
-    "data": {
-        "context1": {
-            "prop": "numericContextProp",
-            "value": 110,
-            "applyCategories": {"location": ["locUsMi"]},
-        }
-    },
-    "variant": "context",
-},
-```
-</details>
+* **`name`**: `[str]` &rarr; The name of the pane.
+* **`props`**: `[dict]` &rarr; The props that will be rendered in the pane.
+    * **See**: `cave_utils.api_utils.general.props`
+* **`values`**: `[dict]` = `None` &rarr;
+    * The values to be assigned to the respective props. Each value is associated with its corresponding prop based on the key name used in `props`.
+    * **See**: `cave_utils.api_utils.general.values`
+* **`layout`**: `[dict]` =`{"type": "grid", "numColumns": "auto", "numRows": "auto"}` &rarr;
+    * The layout of the pane.
+    * **See**: `cave_utils.api_utils.general.layout`
 
-<details>
-  <summary>Filter pane</summary>
+The pane states are located under the path **`panes.paneState.*`**.
 
-```py
-"filter": {
-    "variant": "filter",
-},
-```
-</details>
+Arguments:
 
-<details>
-  <summary>Session pane</summary>
+* **`left`**: `[dict]` = `"wall"` &rarr; The state of a pane activated from the left-side app bar.
+* **`center`**: `[dict]` = `"wall"` &rarr; The state of a centered modal.
+* **`right`**: `[dict]` = `"wall"` &rarr; The state of a pane activated from the right-side app bar.
 
-```py
-"CustomSessionPane": {
-    "name": "Sessions",
-    "variant": "session",
-},
-```
-</details>
+The pane state data is located under the path **`panes.paneState.*.*`**.
 
-## Common keys
-- [`allowModification`](../common_keys/common_keys.md#allowModification)
-- [`layout`](../common_keys/common_keys.md#layout)
-- [`name`](../common_keys/common_keys.md#name)
-- [`order`](../common_keys/common_keys.md#order)
-- [`prop > type`](../common_keys/common_keys.md#prop-type)
-- [`props`](../common_keys/common_keys.md#props-short)
-- [`sendToApi`](../common_keys/common_keys.md#sendToApi)
-- [`sendToClient`](../common_keys/common_keys.md#sendToClient)
-- [`variant`](../common_keys/common_keys.md#variant)
+Arguments:
 
-## Special and custom keys
-Key | Default | Description
---- | ------- | -----------
-`customContextPaneKey*.data.customContextData*` | | This represents the data structure created by the client to store each context in a list of contexts. Initial values can be provided by the API designer if needed.
-`customContextPaneKey*.data.customContextData*`&swarhk;<br>`.applyCategories` | | Used **only** with a [`context`](#context-pane) pane, it takes a dictionary of [`category_*`](#category_)s, each of which is paired with a partial list of its [`customDataChunck*`](../all_keys/categories.md#customDataChunck) keys. This data is normally generated by user interactions as they build out contexts and returned to the API on a `configure` or `solve` request. Initial values can be provided by the API designer if needed.
-`customContextPaneKey*.data.customContextData*`&swarhk;<br>`.applyCategories.category*.customDataChunck*` | | See [`customDataChunck*`](../all_keys/categories.md#customDataChunck).
-`customContextPaneKey*.data.customContextData*`&swarhk;<br>`.prop` | | Used in the `data` portion of a [`context`](#context-pane) pane to note which prop the current context is altering. Takes a `customPropKey*`.
-`customPaneKey*.props.customPropKey*` | | See [`customPropKey*`](../common_keys/props.md#customPropKey).
-`customPaneKey*.props.customPropKey*`&swarhk;<br>`.value.customOption*` | | See [`customOption*`](../common_keys/props.md#customOption).
-`customContextPaneKey*.props.customPropKey*`&swarhk;<br>`.selectableCategories` | Required | Used in a [`context`](#context-pane) pane, it takes a list of [`category_*`](#category_) keys (**only**). These are the used to determine which categories this context can be applied to.
-`customPaneKey*.teamSync` | `False` | If `True`, creates a sync button on the top of the pane. When that sync button is clicked, everything in that pane is synced across all sessions for that team (or user if individual session) such that all other sessions for that team have the exact same pane as it exists in the current session.
-`customPaneKey*.teamSyncCommand` | | If specified, passes an API command argument along with a mutation request. This command will be passed to `execute_command` for each session to be synced.
-`customPaneKey*.teamSyncCommandKeys` | | If specified, only passes specific session keys over to `execute_command` for each session to be synced.
-<a name="pane-variant">`customPaneKey*.variant`</a> | `'options'` | As a direct child of `customPaneKey*`, the `variant` key is used to determine the pane variant. Each variant comes along with additional keys that add specific functionality to the pane. Acceptable values inclue `session`, `appSettings`, `options`, `context`, `filter`
-`customPaneKey*.width` | `'auto'` | Sets the width of the pane. This property is an exact equivalent of the [CSS `width` property](https://developer.mozilla.org/en-US/docs/Web/CSS/width). If set to `'auto'`, the pane will stretch to fit its content with a width no less than `'450px'`. If the specified width exceeds the width of the viewport, the pane will match the width of the viewport.
-<!-- `paneState.open` | | Takes a `customPaneKey*` value to cause the referenced pane to open when the app loads. -->
-<!-- `filtered` | `{}` | Takes key value pairs where the keys are category keys, and the values are lists of lowest level items in that category to be included (not filtered out). If a category is not included in this dictionary then all items in that category are displayed. -->
+* **`pin`**: `[bool]` = `False` &rarr; Whether or not the pane is pinned.
+    * **Note**: Only used for panes located on `"left"` or `"right"` side app bars.
+* **`type`**: `[str]` = `"pane"` &rarr; The context that activated the current visible pane.
+    * **Accepted Values**:
+        * `"pane"`: A pane triggered from the `"left"` or `"right"` side app bars.
+        * `"feature"`: Map feature data is displayed in the `"center"` of the screen.
+    * **Note**: In the vast majority of use cases, the `type` attribute is not relevant to the design of the CAVE App, as its primary purpose is to store temporary UI state during user interactions. Nevertheless, a CAVE App designer has the option to prepopulate it if required.
+* **`open`**: `[str | dict]` = `None` &rarr;
+    * The id of the open pane or a dictionary containing data related to a specific datapoint of a map feature.
+    * **Notes**:
+        * In the vast majority of use cases, the `open` attribute is not relevant to the design of the CAVE App, as its primary purpose is to store temporary UI state during user interactions. Nevertheless, a CAVE App designer has the option to prepopulate it if required.
+        * For validation purposes or in advanced use cases, this attribute must correspond with the id (i.e., the dictionary key) of a pane located under `panes.data` when `type` is set to `"pane"`.

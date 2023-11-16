@@ -4,3 +4,4 @@ configobj
 websockets
 asyncio
 cave_utils
+pamda
