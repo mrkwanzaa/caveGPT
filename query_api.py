@@ -15,6 +15,7 @@ config = configobj.ConfigObj('.env')
 api_model = "gpt-4-1106-preview"
 docs_dir = 'docs/'
 client = OpenAI(api_key=config["OPENAI_API_KEY"])
+token = config["CAVE_TOKEN"]
 
 
 #Setup Tokenizer
@@ -40,7 +41,7 @@ def tiktoken_len(text):
     return len(tokens)
 
 def get_api():
-    with connect("ws://localhost:8000/ws/?user_token=27774d407ebaeea295d3970d31a5b79b931f14f5") as websocket:
+    with connect(f'ws://localhost:8000/ws/?user_token={token}') as websocket:
         websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
         for _ in range(4):
             message = websocket.recv()
@@ -93,7 +94,9 @@ def chunk_into_messages(command, top_level_key, api):
         chunks = [add_request_text(encoded_data)]
     return chunks
 
-def find_mutation_path(chunks):
+def find_mutation_path(chunks, error):
+    message = 'Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn\'t possible with the given data respond with \'Not possible\'' if error == False else \
+        'Using the given documentation delimited by triple quotes and current api state encoded in JSON, and an error message describing a current issue, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn\'t possible with the given data respond with \'Not possible\'\n\nError: ' + error
     for data in chunks:
         result = query_model([
             {"role": "system", "content": "Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn't possible with the given data respond with 'Not possible'"},
@@ -104,6 +107,16 @@ def find_mutation_path(chunks):
             return result
     return False
 
+def send_mutations(path, top_level_key,  data_versions):
+    with connect(f'ws://localhost:8000/ws/?user_token={token}') as websocket:
+        command = {"command": "mutate_session"}
+        command['data'] = {}
+        command['data']['data_versions'] = data_versions
+        command['data']['data_path'] = path['path']
+        command['data']['data_value'] = path['value']
+        command['data']['data_name'] = top_level_key
+        websocket.send(json.dumps(command))
+
 def locate_path(path_string, top_level_key):
     given_path = json.loads(path_string)
     list_path = given_path['path'].split('.')
@@ -113,22 +126,34 @@ def locate_path(path_string, top_level_key):
     return given_path
 
 if __name__ == '__main__':
-    # accept command
-    command = input('Command: ')
-    api = json.loads(get_api())
-    print('Finding top level key...')
-    top_level_key = find_top_level_key(command)
-    print(top_level_key)
-    print('Chunking api...')
-    api_chunks = chunk_into_messages(command, top_level_key, api)
-    print('Finding mutation path...')
-    result = find_mutation_path(api_chunks)
-    path = locate_path(result, top_level_key)
-    print(path)
-    print('Validating mutation')
-    muated_api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
-    validator = Validator(muated_api)
-    validator.log.print_logs()
+    while True:   
+        error = True
+        # accept command
+        command = input('Command: ')
+        api = json.loads(get_api())
+        print('Finding top level key...')
+        top_level_key = find_top_level_key(command)
+        print(top_level_key)
+        print('Chunking api...')
+        while error:
+            api_chunks = chunk_into_messages(command, top_level_key, api)
+            print('Finding mutation path...')
+            result = find_mutation_path(api_chunks, error)
+            path = locate_path(result, top_level_key)
+            print(path)
+            print('Validating mutation')
+            api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
+            validator = Validator(api)
+            logs = validator.log.get_logs()
+            if len(logs) > 0:
+                error = logs[0]
+                print(logs)
+                # Note: remove this line to allow for unlimited re-attempts (could be expensive)
+                input('Error encountered, press enter to try again')
+            else:
+                error = False
+        send_mutations(path, top_level_key, api['verions'])
+
 
 
 
