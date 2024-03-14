@@ -25,6 +25,7 @@ tokenizer = tiktoken.get_encoding(tokenizer_name.name)
 # load docs
 texts = []
 docs_by_name = {}
+api_message = ''
 
 for doc in os.listdir(docs_dir):
     with open(docs_dir + doc, 'r') as f:
@@ -41,27 +42,33 @@ def tiktoken_len(text):
     return len(tokens)
 
 def get_api():
-    with connect(f'ws://localhost:8000/ws/?user_token={token}') as websocket:
-        websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
-        for _ in range(4):
-            message = websocket.recv()
-    return message
+    global api_message
+    if api_message == '':
+        with connect(f'ws://localhost:8000/ws/?user_token={token}', max_size=None) as websocket:
+            websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
+            for _ in range(4):
+                message = websocket.recv()
+        api_message = message
+    return api_message
 
-def query_model(messages, json):
+def query_model(system, user, json):
     completion = client.chat.completions.create(
         model=api_model,
-        temperature=0.1,
-        messages=messages,
-        # max_tokens=200,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
         response_format={"type": "json_object"} if json else None,
     )
     return completion.choices[0].message.content
 
-def find_top_level_key(command):
-    result = query_model([
-            {"role": "system", "content": "Using the given documentation delimited by triple quotes, respond to user requests with nothing but the name of the top-level key that must be edited in order to fufill the request surrounded by single quotes"},
-            {"role": "user", "content": '"""' + docs_by_name['index'] + '""" \n\n' + 'request: ' + command},
-        ], json=False
+def find_top_level_key(command, error):
+    message = 'Using the given documentation delimited by triple quotes, respond to user requests with nothing but the name of the top-level key that must be edited in order to fufill the request surrounded by single quotes' if error == False else \
+        'Using the given documentation delimited by triple quotes, and an error message describing a potential issue, respond to user requests with nothing but the name of the top-level key that must be edited in order to fufill the request while avoiding the error surrounded by single quotes\n\nError: ' + error
+    result = query_model(
+        message,
+        '"""' + docs_by_name['index'] + '""" \n\n' + 'request: ' + command,
+        json=False
     )
     current_key = result.replace("'", '')
     return current_key
@@ -96,12 +103,12 @@ def chunk_into_messages(command, top_level_key, api):
 
 def find_mutation_path(chunks, error):
     message = 'Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn\'t possible with the given data respond with \'Not possible\'' if error == False else \
-        'Using the given documentation delimited by triple quotes and current api state encoded in JSON, and an error message describing a current issue, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn\'t possible with the given data respond with \'Not possible\'\n\nError: ' + error
+        'Using the given documentation delimited by triple quotes and current api state encoded in JSON, and an error message describing a potential issue, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action while avoiding the error in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn\'t possible with the given data respond with \'Not possible\'\n\nError: ' + error
     for data in chunks:
-        result = query_model([
-            {"role": "system", "content": "Using the given documentation delimited by triple quotes and current api state encoded in JSON, respond to user requests with the path(s) and value(s) you would modify in the api to achieve the users desired action in the format \n```json\n{\"path\": example.path.here, \"value\": value}```. If the user request isn't possible with the given data respond with 'Not possible'"},
-            {"role": "user", "content": data},
-            ], json=True
+        result = query_model(
+           message,
+           data,
+           json=True
         )
         if not 'Not possible' in result:
             return result
@@ -125,34 +132,67 @@ def locate_path(path_string, top_level_key):
     given_path['path'] = list_path
     return given_path
 
+read_json_file = lambda file: json.load(open(file, 'r'))
+
+def find_prompt_test(prompt):
+    tests = read_json_file('testCommands.json')
+    for test in tests:
+        if test['command'] == prompt:
+            return test
+
+prompts_dict = read_json_file('gptPrompts.json')
+results = {}
+passed = 0
 if __name__ == '__main__':
-    while True:   
-        error = True
-        # accept command
-        command = input('Command: ')
-        api = json.loads(get_api())
-        print('Finding top level key...')
-        top_level_key = find_top_level_key(command)
-        print(top_level_key)
-        print('Chunking api...')
-        while error:
-            api_chunks = chunk_into_messages(command, top_level_key, api)
-            print('Finding mutation path...')
-            result = find_mutation_path(api_chunks, error)
-            path = locate_path(result, top_level_key)
-            print(path)
-            print('Validating mutation')
-            api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
-            validator = Validator(api)
-            logs = validator.log.get_logs()
-            if len(logs) > 0:
-                error = logs[0]
-                print(logs)
-                # Note: remove this line to allow for unlimited re-attempts (could be expensive)
-                input('Error encountered, press enter to try again')
-            else:
-                error = False
-        send_mutations(path, top_level_key, api['verions'])
+    for prompt in list(prompts_dict.keys())[4:5]:
+        results[prompt] = {}
+        print(f'Prompt: {prompt}')
+        for command in prompts_dict[prompt]:  
+            success = False
+            error = False
+            # accept command
+            # command = input('Command: ')
+            for k in range(10):
+                sleep(1)
+                old_api_key = None
+                for i in range(2):
+                    api = json.loads(get_api())
+                    print('Finding top level key...')
+                    top_level_key = find_top_level_key(command, error)
+                    print(top_level_key)
+                    print('Chunking api...')
+                    api_chunks = chunk_into_messages(command, top_level_key, api)
+                    print('Finding mutation path...')
+                    if old_api_key != top_level_key:
+                        error = False
+                    result = find_mutation_path(api_chunks, error)
+                    path = locate_path(result, top_level_key)
+                    print(path)
+                    print('Validating mutation')
+                    api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
+                    validator = Validator(api)
+                    logs = validator.log.get_logs()
+                    if len(logs) > 0:
+                        error = logs[0]['msg']
+                        print(logs)
+                        print(f'Error encountered, attempting self correction')
+                    else:
+                        error = False
+                        break
+                result = pamda.assocPath(path=path['path'], value=path['value'], data=api)
+                expected = find_prompt_test(prompt)
+
+                if pamda.path(expected['path'], api) == expected['value']:
+                    success = True
+                    break
+                else:
+                    print('Mutation incorrect. Retrying...')
+            results[prompt][command] = success
+            # send_mutations(path, top_level_key, api['verions'])
+    # save results to results.json
+    with open('results.json', 'w') as f:
+        json.dump(results, f)
+        
 
 
 

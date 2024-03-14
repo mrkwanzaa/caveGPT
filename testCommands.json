@@ -1,0 +1,237 @@
+[
+    {"command": "Color the country geo by learners", "path": ["maps", "data", "map1", "legendGroups", "mapLayers", "data", "country", "colorBy"], "value": "learners"},
+    {"command": "Hide the country geo from the map", "path": ["maps", "data", "map1", "legendGroups", "mapLayers", "data", "country", "value"], "value": false},
+    {"command": "Color the partner nodes by partner type", "path": ["maps", "data", "map1", "legendGroups", "mapLayers", "data", "partner", "colorBy"], "value": "partnerMMType"},
+    {"command": "Hide the Scale Centers nodes from the map", "path": ["maps", "data", "map1", "legendGroups", "mapLayers", "data", "scaleCenter", "value"], "value": false},
+    {"command": "Switch to the statistics dashboard", "path": ["pages", "currentPage"], "value": "dash2"},
+    {"command": "Change the pass rate chart to verification rate", "path": ["pages", "data", "dash2", "pageLayout", 3, "statId"], "value": "verificationRate"},
+    {"command": "Change the bottom right chart to show verification rate", "path": ["pages", "data", "dash2", "pageLayout", 3, "statId"], "value": "verificationRate"},
+    {"command": "Open the settings pane", "path": ["panes", "paneState", "left", "open"], "value": "appSettings"},
+    {"command": "Change the first chart to show total enrollments by year", "path": ["pages", "data", "dash2", "pageLayout", 0, "groupingId"], "value": ["enrollment_time"]},
+    {"command": "Change the top left chart to show total enrollments by year", "path": ["pages", "data", "dash2", "pageLayout", 0, "groupingId"], "value": ["enrollment_time"]},
+    {"command": "Change the credentials earned chart to a line chart", "path": ["pages", "data", "dash2", "pageLayout", 2, "variant"], "value": "line"},
+    {"command": "Activate demo mode", "path": ["settings", "demo"], "value": true},
+    {"command": "Remove the last chart", "path": ["pages", "data","dash2", "pageLayout", 4], "value": null},
+    {"command": "Remove all the charts", "path": ["pages", "data","dash2", "pageLayout"], "value": []},
+    {"command": "Open the United States country model" , "path": ["panes", "paneState", "center"], "value": {
+        "open": {
+            "type": "Country",
+            "name": "Country",
+            "geoJson": {
+                "geoJsonLayer": "https://geojsons.mitcave.com/world/countries-md-v2.json",
+                "geoJsonProp": "FIPS_10"
+            },
+            "props": {
+                "infoHeader": {
+                    "name": "Information",
+                    "type": "head",
+                    "help": "Information for this country"
+                },
+                "name": {
+                    "name": "Name",
+                    "type": "text",
+                    "enabled": false,
+                    "help": "The name of this country"
+                },
+                "enrollmentsHeader": {
+                    "name": "Enrollments",
+                    "type": "head",
+                    "help": "Enrollments from this country"
+                },
+                "enrollments": {
+                    "name": "Enrollments",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of MM course enrollments for all learners from this country",
+                    "unit": "enrollments"
+                },
+                "verifiedEnrollments": {
+                    "name": "Verified Enrollments",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of verified MM course enrollments for all learners from this country",
+                    "unit": "enrollments"
+                },
+                "learnersHeader": {
+                    "name": "Learners",
+                    "type": "head",
+                    "help": "Learners from this country"
+                },
+                "learners": {
+                    "name": "Learners",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of unique MM learners from this country",
+                    "unit": "people"
+                },
+                "verifiedLearners": {
+                    "name": "Verified Learners",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of unique verified MM learners from this country",
+                    "unit": "people"
+                },
+                "certificatesHeader": {
+                    "name": "Certificates",
+                    "type": "head",
+                    "help": "Certificates from this country"
+                },
+                "passingVerifiedEnrollments": {
+                    "name": "Certificates Earned",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of certificates earned by learners from this country",
+                    "unit": "certificates"
+                },
+                "passingVerifiedLearners": {
+                    "name": "Certificate Holders",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of unique certificate holders from this country",
+                    "unit": "people"
+                },
+                "credentialsHeader": {
+                    "name": "Credentials",
+                    "type": "head",
+                    "help": "Credential information for this country"
+                },
+                "credentials": {
+                    "name": "MM Credential Holders",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The number of unique MM credential holders from this country",
+                    "unit": "people"
+                },
+                "verificationRate": {
+                    "name": "Verification Rate",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The percentage of enrollments that verify in this country",
+                    "unit": "%"
+                },
+                "certificatesPerHolder": {
+                    "name": "Certificates Per Holder",
+                    "type": "num",
+                    "enabled": false,
+                    "help": "The average amount of certificates per certificate holder in this country",
+                    "unit": "certificates",
+                    "unitPlacement": "after"
+                }
+            },
+            "layout": {
+                "type": "grid",
+                "numColumns": 3,
+                "numRows": "auto",
+                "data": {
+                    "col1Row1": {
+                        "type": "item",
+                        "column": 1,
+                        "row": 1,
+                        "itemId": "infoHeader"
+                    },
+                    "col1Row2": {
+                        "type": "item",
+                        "column": 1,
+                        "row": 2,
+                        "itemId": "name"
+                    },
+                    "col2Row1": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 1,
+                        "itemId": "enrollmentsHeader"
+                    },
+                    "col2Row2": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 2,
+                        "itemId": "enrollments"
+                    },
+                    "col2Row3": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 3,
+                        "itemId": "verifiedEnrollments"
+                    },
+                    "col3Row1": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 4,
+                        "itemId": "learnersHeader"
+                    },
+                    "col3Row2": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 5,
+                        "itemId": "learners"
+                    },
+                    "col3Row3": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 6,
+                        "itemId": "verifiedLearners"
+                    },
+                    "col3Row4": {
+                        "type": "item",
+                        "column": 2,
+                        "row": 7,
+                        "itemId": "verificationRate"
+                    },
+                    "col4Row1": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 4,
+                        "itemId": "certificatesHeader"
+                    },
+                    "col4Row2": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 5,
+                        "itemId": "passingVerifiedEnrollments"
+                    },
+                    "col4Row3": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 6,
+                        "itemId": "passingVerifiedLearners"
+                    },
+                    "col4Row4": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 7,
+                        "itemId": "certificatesPerHolder"
+                    },
+                    "col5Row1": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 1,
+                        "itemId": "credentialsHeader"
+                    },
+                    "col5Row2": {
+                        "type": "item",
+                        "column": 3,
+                        "row": 2,
+                        "itemId": "credentials"
+                    }
+                }
+            },
+            "values": {
+                "name": "United States",
+                "enrollments": 178127,
+                "verifiedEnrollments": 30521,
+                "learners": 77229,
+                "verifiedLearners": 11746,
+                "passingVerifiedEnrollments": 14228,
+                "passingVerifiedLearners": 4667,
+                "credentials": 1130,
+                "verificationRate": 17.1,
+                "certificatesPerHolder": 3
+            },
+            "geoJsonValue": "US",
+            "feature": "geos",
+            "key": "[\"country\",\"2\"]",
+            "mapId": "map1"
+        },
+        "type": "feature"
+    }}
+]

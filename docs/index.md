@@ -8,10 +8,10 @@
     * **See**: `cave_utils.api.panes`
 * **`pages`**: `[dict]` = `{}` &rarr; Configure pages for your application.
     * **See**: `cave_utils.api.pages`
-* **`maps`**: `[dict]` = `{}` &rarr; Configure map views and settings for your application.
+* **`maps`**: `[dict]` = `{}` &rarr; Configure map views and settings for your application, including coloring and sizing of mapFeatures.
     * **See**: `cave_utils.api.maps`
 * **`mapFeatures`**: `[dict]` = `{}` &rarr;
-    * Configure map features (interactive items on the map) for your application.
+    * Configure the prop values for map features (interactive items on the map) for your application.
     * **See**: `cave_utils.api.mapFeatures`
 * **`groupedOutputs`**: `[dict]` = `{}` &rarr;
     * Configure data that can be sliced and diced for charts and tables based on arbitrary groups.
