@@ -146,7 +146,7 @@ passed = 0
 if __name__ == '__main__':
     for prompt in list(prompts_dict.keys())[4:5]:
         results[prompt] = {}
-        print(f'Prompt: {prompt}')
+        print(f'Prompt base: {prompt}')
         for command in prompts_dict[prompt]:  
             success = False
             error = False
