@@ -41,14 +41,21 @@ def tiktoken_len(text):
     )
     return len(tokens)
 
+# def get_api():
+#     global api_message
+#     if api_message == '':
+#         with connect(f'ws://localhost:8000/ws/?user_token={token}', max_size=None) as websocket:
+#             websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
+#             for _ in range(4):
+#                 message = websocket.recv()
+#         api_message = message
+#     return api_message
+
 def get_api():
     global api_message
     if api_message == '':
-        with connect(f'ws://localhost:8000/ws/?user_token={token}', max_size=None) as websocket:
-            websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
-            for _ in range(4):
-                message = websocket.recv()
-        api_message = message
+        with open('api.json', 'r') as f:
+            api_message = f.read()
     return api_message
 
 def query_model(system, user, json):
@@ -153,41 +160,50 @@ if __name__ == '__main__':
             # accept command
             # command = input('Command: ')
             for k in range(10):
-                sleep(1)
-                old_api_key = None
-                for i in range(2):
-                    api = json.loads(get_api())
-                    print('Finding top level key...')
-                    top_level_key = find_top_level_key(command, error)
-                    print(top_level_key)
-                    print('Chunking api...')
-                    api_chunks = chunk_into_messages(command, top_level_key, api)
-                    print('Finding mutation path...')
-                    if old_api_key != top_level_key:
-                        error = False
-                    result = find_mutation_path(api_chunks, error)
-                    path = locate_path(result, top_level_key)
-                    print(path)
-                    print('Validating mutation')
-                    api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
-                    validator = Validator(api)
-                    logs = validator.log.get_logs()
-                    if len(logs) > 0:
-                        error = logs[0]['msg']
-                        print(logs)
-                        print(f'Error encountered, attempting self correction')
-                    else:
-                        error = False
-                        break
-                result = pamda.assocPath(path=path['path'], value=path['value'], data=api)
-                expected = find_prompt_test(prompt)
+                try:
+                    sleep(1)
+                    old_api_key = None
+                    for i in range(2):
+                        api = json.loads(get_api())
+                        print('Finding top level key...')
+                        top_level_key = find_top_level_key(command, error)
+                        print(top_level_key)
+                        if top_level_key not in api['data'].keys():
+                            error = f'{top_level_key} is not an acceptable key.'
+                        else:
+                            print('Chunking api...')
+                            api_chunks = chunk_into_messages(command, top_level_key, api)
+                            print('Finding mutation path...')
+                            if old_api_key != top_level_key:
+                                error = False
+                            result = find_mutation_path(api_chunks, error)
+                            print(result)
+                            path = locate_path(result, top_level_key)
+                            print(path)
+                            print('Validating mutation')
+                            api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
+                            validator = Validator(api)
+                            logs = validator.log.get_logs()
+                            if len(logs) > 0:
+                                error = logs[0]['msg']
+                                print(logs)
+                                print(f'Error encountered, attempting self correction')
+                            else:
+                                error = False
+                                break
+                    result = pamda.assocPath(path=path['path'], value=path['value'], data=api)
+                    expected = find_prompt_test(prompt)
 
-                if pamda.path(expected['path'], api) == expected['value']:
-                    success = True
-                    break
-                else:
-                    print('Mutation incorrect. Retrying...')
+                    if pamda.path(expected['path'], api) == expected['value']:
+                        success = True
+                        break
+                    else:
+                        print('Mutation incorrect. Retrying...')
+                except Exception as e: 
+                    print(e)
             results[prompt][command] = success
+            if success:
+                print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
     with open('results.json', 'w') as f:
