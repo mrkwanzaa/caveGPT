@@ -1,26 +1,16 @@
 # Imports and setup model
+from llama_cpp import Llama
 import os
-from openai import OpenAI
 import json
-import configobj
-import tiktoken
-import asyncio
-from websockets.sync.client import connect
+import re
 from time import sleep
 from pamda import pamda
 from cave_utils.api_utils.validator import Validator
+from copy import deepcopy
 
 # Setup env vars and constants
-config = configobj.ConfigObj('.env')
-api_model = "gpt-4-1106-preview"
 docs_dir = 'docs/'
-client = OpenAI(api_key=config["OPENAI_API_KEY"])
-token = config["CAVE_TOKEN"]
-
-
-#Setup Tokenizer
-tokenizer_name = tiktoken.encoding_for_model(api_model)
-tokenizer = tiktoken.get_encoding(tokenizer_name.name)
+llm = Llama(model_path="../qwen1_5-72b-chat-q3_k_m.gguf", tensor_split=[0.5,0.5], n_threads=1, n_gpu_layers=1000, n_ctx=32768, verbose=False)
 
 # load docs
 texts = []
@@ -35,21 +25,8 @@ for doc in os.listdir(docs_dir):
 
 # Define functions
 def tiktoken_len(text):
-    tokens = tokenizer.encode(
-        text,
-        disallowed_special=()
-    )
+    tokens = llm.tokenize(text.encode('utf-8'))
     return len(tokens)
-
-# def get_api():
-#     global api_message
-#     if api_message == '':
-#         with connect(f'ws://localhost:8000/ws/?user_token={token}', max_size=None) as websocket:
-#             websocket.send('{"command": "get_session_data","data": {"data_versions": {}}}')
-#             for _ in range(4):
-#                 message = websocket.recv()
-#         api_message = message
-#     return api_message
 
 def get_api():
     global api_message
@@ -59,15 +36,21 @@ def get_api():
     return api_message
 
 def query_model(system, user, json):
-    completion = client.chat.completions.create(
-        model=api_model,
+    output = llm.create_chat_completion(
         messages=[
-            {"role": "system", "content": system},
+            {
+                "role": "system",
+                "content": system,
+            },
             {"role": "user", "content": user},
         ],
-        response_format={"type": "json_object"} if json else None,
+        response_format={
+                "type": "json_object",
+            } if json else None,
     )
-    return completion.choices[0].message.content
+    return output['choices'][0]['message']['content']
+
+
 
 def find_top_level_key(command, error):
     message = 'Using the given documentation delimited by triple quotes, respond to user requests with nothing but the name of the top-level key that must be edited in order to fufill the request surrounded by single quotes' if error == False else \
@@ -75,13 +58,14 @@ def find_top_level_key(command, error):
     result = query_model(
         message,
         '"""' + docs_by_name['index'] + '""" \n\n' + 'request: ' + command,
-        json=False
+        False
     )
-    current_key = result.replace("'", '')
+    result = result.replace('\n', '')
+    current_key = re.sub(r'\W+', '', result)
     return current_key
 
 def chunk_into_messages(command, top_level_key, api):
-    max_tokens = 100000
+    max_tokens = 32000
     def add_request_text(api_data):
         return '"""' + docs_by_name[top_level_key] + '""" \n\n' \
                     + api_data + '\n\nrequest: ' + command
@@ -90,12 +74,13 @@ def chunk_into_messages(command, top_level_key, api):
     encoded_chunk = add_request_text(encoded_data)
     chunks = [None]
     if tiktoken_len(encoded_chunk) > max_tokens:
+        print('too long!')
         max_size = True
         key_dict =state[top_level_key]
         chunks[-1] = {i:key_dict[i] for i in key_dict if i!='data'}
         chunks[-1]['data'] = {}
         for key, value in key_dict['data'].items():
-            # This isn't the exact token length as new data is outside request text, but should be within ~1 token
+            # This isn't the exact token length as new data is outside request text, but should be within ~10 tokens
             if tiktoken_len(add_request_text(json.dumps(chunks[-1]))\
                             + json.dumps({key: value})) > max_tokens:
                 chunks.append({i:key_dict[i] for i in key_dict if i!='data'})
@@ -115,29 +100,63 @@ def find_mutation_path(chunks, error):
         result = query_model(
            message,
            data,
-           json=True
+           True
         )
         if not 'Not possible' in result:
             return result
     return False
 
-def send_mutations(path, top_level_key,  data_versions):
-    with connect(f'ws://localhost:8000/ws/?user_token={token}') as websocket:
-        command = {"command": "mutate_session"}
-        command['data'] = {}
-        command['data']['data_versions'] = data_versions
-        command['data']['data_path'] = path['path']
-        command['data']['data_value'] = path['value']
-        command['data']['data_name'] = top_level_key
-        websocket.send(json.dumps(command))
+def extract_between_braces(s):
+    open = 0
+    indicies = []
+    for i, char in enumerate(s):
+        if open < 0:
+            raise ValueError('Bracket mismatch')
+        elif char == "{":
+            if open == 0:
+                indicies.append([i])
+            open += 1
+        elif char == "}":
+            open -= 1
+            if open == 0:
+                indicies[-1].append(i)
+    return [s[i[0]:i[1]+1] for i in indicies]
+
+def follow_path(path_list, data):
+    value = data
+    for item in path_list:
+        value = value[item]
+    return value
+
+def set_path(path_list, value, data):
+    original = deepcopy(data)
+    current = original
+    for item in path_list[:-1]:
+        try:
+            current = current[item]
+        except KeyError:
+            current[item] = {}
+            current = current[item] 
+    current[path_list[-1]] = value
+    return original
 
 def locate_path(path_string, top_level_key):
-    given_path = json.loads(path_string)
-    list_path = given_path['path'].split('.')
-    if list_path[0] != top_level_key:
-        list_path.insert(0, top_level_key)
-    given_path['path'] = list_path
-    return given_path
+    filtered_json = extract_between_braces(path_string)
+    paths = []
+    for s in filtered_json:
+        try:
+            given_path = json.loads(s)
+            list_path = given_path.get('path', "").split('.')
+            if list_path[0] != top_level_key:
+                list_path.insert(0, top_level_key)
+            for i in range(len(list_path)):
+                if list_path[i].isdigit():
+                    list_path[i] = int(list_path[i])
+            given_path['path'] = list_path
+            paths.append(given_path)
+        except:
+            print("Path failed, moving on")
+    return paths
 
 read_json_file = lambda file: json.load(open(file, 'r'))
 
@@ -151,7 +170,7 @@ prompts_dict = read_json_file('gptPrompts.json')
 results = {}
 passed = 0
 if __name__ == '__main__':
-    for prompt in list(prompts_dict.keys())[4:5]:
+    for prompt in list(prompts_dict.keys()):
         results[prompt] = {}
         print(f'Prompt base: {prompt}')
         for command in prompts_dict[prompt]:  
@@ -159,11 +178,10 @@ if __name__ == '__main__':
             error = False
             # accept command
             # command = input('Command: ')
-            for k in range(10):
+            for k in range(1):
                 try:
-                    sleep(1)
                     old_api_key = None
-                    for i in range(2):
+                    for i in range(4):
                         api = json.loads(get_api())
                         print('Finding top level key...')
                         top_level_key = find_top_level_key(command, error)
@@ -178,10 +196,15 @@ if __name__ == '__main__':
                                 error = False
                             result = find_mutation_path(api_chunks, error)
                             print(result)
-                            path = locate_path(result, top_level_key)
-                            print(path)
+                            paths = locate_path(result, top_level_key)
+                            print(paths)
                             print('Validating mutation')
-                            api = pamda.assocPath(path=path['path'], value=path['value'], data=api['data'])
+                            api = api['data']
+                            for path in paths:
+                                try:
+                                    api = set_path(path['path'], path['value'], api)
+                                except:
+                                    print(f'Json failed: {path}')
                             validator = Validator(api)
                             logs = validator.log.get_logs()
                             if len(logs) > 0:
@@ -191,14 +214,16 @@ if __name__ == '__main__':
                             else:
                                 error = False
                                 break
-                    result = pamda.assocPath(path=path['path'], value=path['value'], data=api)
+                    result = set_path(path['path'], path['value'], api)
                     expected = find_prompt_test(prompt)
 
-                    if pamda.path(expected['path'], api) == expected['value']:
+                    if follow_path(expected['path'], api) == expected['value']:
                         success = True
                         break
                     else:
-                        print('Mutation incorrect. Retrying...')
+                        if error:
+                            print('caught error')
+                        print('uncaught error')
                 except Exception as e: 
                     print(e)
             results[prompt][command] = success
@@ -206,15 +231,5 @@ if __name__ == '__main__':
                 print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
-    with open('results.json', 'w') as f:
+    with open('QwenonGPT4results.json', 'w') as f:
         json.dump(results, f)
-        
-
-
-
-
-
-
-
-
-
