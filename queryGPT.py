@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import string
 from time import sleep
 from pamda import pamda
 from cave_utils.api_utils.validator import Validator
@@ -166,10 +167,18 @@ def locate_path(path_string, top_level_key):
             list_path = given_path.get('path', "").split('.')
             if list_path[0] != top_level_key:
                 list_path.insert(0, top_level_key)
+            final_path = []
             for i in range(len(list_path)):
                 if list_path[i].isdigit():
-                    list_path[i] = int(list_path[i])
-            given_path['path'] = list_path
+                    final_path.append(int(list_path[i]))
+                else:
+                    index = re.search("\[[0-9]\]", list_path[i])
+                    if index is not None:
+                        final_path.append(list_path[i].replace(index.match, ''))
+                        final_path.append(int(index.match.strip(string.ascii_letters)))
+                    else:
+                        final_path.append(list_path[i])
+            given_path['path'] = final_path
             paths.append(given_path)
         except:
             print("Path failed, moving on")

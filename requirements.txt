@@ -5,3 +5,4 @@ websockets
 asyncio
 cave_utils==2.1.2
 pamda
+re
