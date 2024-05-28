@@ -1,5 +1,4 @@
 # Imports and setup model
-from llama_cpp import Llama
 import os
 import json
 import re
@@ -7,10 +6,21 @@ from time import sleep
 from pamda import pamda
 from cave_utils.api_utils.validator import Validator
 from copy import deepcopy
+import os
+from openai import OpenAI
+import configobj
+import tiktoken
+from time import sleep
+import json
+
+config = configobj.ConfigObj('.env')
+client = OpenAI(api_key=config["OPENAI_API_KEY"])
+model = 'gpt-4o-2024-05-13'
+tokenizer_name = tiktoken.encoding_for_model(model)
+tokenizer = tiktoken.get_encoding(tokenizer_name.name)
 
 # Setup env vars and constants
 docs_dir = 'docs/'
-llm = Llama(model_path="../qwen1_5-72b-chat-q3_k_m.gguf", tensor_split=[0.5,0.5], n_threads=1, n_gpu_layers=1000, n_ctx=32768, verbose=False)
 
 # load docs
 texts = []
@@ -25,7 +35,10 @@ for doc in os.listdir(docs_dir):
 
 # Define functions
 def tiktoken_len(text):
-    tokens = llm.tokenize(text.encode('utf-8'))
+    tokens = tokenizer.encode(
+        text,
+        disallowed_special=()
+    )
     return len(tokens)
 
 def get_api():
@@ -36,7 +49,8 @@ def get_api():
     return api_message
 
 def query_model(system, user, json):
-    output = llm.create_chat_completion(
+    output = client.chat.completions.create(
+        model=model,
         messages=[
             {
                 "role": "system",
@@ -48,7 +62,7 @@ def query_model(system, user, json):
                 "type": "json_object",
             } if json else None,
     )
-    return output['choices'][0]['message']['content']
+    return output.choices[0].message.content
 
 
 
@@ -65,7 +79,7 @@ def find_top_level_key(command, error):
     return current_key
 
 def chunk_into_messages(command, top_level_key, api):
-    max_tokens = 32000
+    max_tokens = 8000
     def add_request_text(api_data):
         return '"""' + docs_by_name[top_level_key] + '""" \n\n' \
                     + api_data + '\n\nrequest: ' + command
@@ -125,7 +139,10 @@ def extract_between_braces(s):
 def follow_path(path_list, data):
     value = data
     for item in path_list:
-        value = value[item]
+        try:
+            value = value[item]
+        except:
+            return None
     return value
 
 def set_path(path_list, value, data):
@@ -134,7 +151,7 @@ def set_path(path_list, value, data):
     for item in path_list[:-1]:
         try:
             current = current[item]
-        except KeyError:
+        except NameError:
             current[item] = {}
             current = current[item] 
     current[path_list[-1]] = value
@@ -181,7 +198,7 @@ if __name__ == '__main__':
             for k in range(1):
                 try:
                     old_api_key = None
-                    for i in range(4):
+                    for i in range(2):
                         api = json.loads(get_api())
                         print('Finding top level key...')
                         top_level_key = find_top_level_key(command, error)
@@ -223,7 +240,8 @@ if __name__ == '__main__':
                     else:
                         if error:
                             print('caught error')
-                        print('uncaught error')
+                        else:
+                            print('uncaught error')
                 except Exception as e: 
                     print(e)
             results[prompt][command] = success
@@ -231,5 +249,5 @@ if __name__ == '__main__':
                 print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
-    with open('QwenonGPT4results.json', 'w') as f:
+    with open('GptonGptresults.json', 'w') as f:
         json.dump(results, f)

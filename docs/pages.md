@@ -62,8 +62,8 @@ Arguments:
         * `"mean"`: Calculate the mean of the aggregated data
         * `"min"`: Find the minimum values within the aggregated data
         * `"max"`: Find the maximum values the aggregated data
-* `groupedOutputDataId`: `[list]` = `None` &rarr; The list of ids representing the grouped output data to use.
-* `statId`: `[list]` = `None` &rarr; The list of ids corresponding to the stat(s) to be used.
+* `groupedOutputDataId`: `[str | list]` = `None` &rarr; The id or list of ids representing the grouped output data to use.
+* `statId`: `[str | list]` = `None` &rarr; The id or list of ids corresponding to the stat(s) to be used.
 * `showToolbar`: `[bool]` = `None` &rarr; Whether or not the chart toolbar should be shown.
     * Note: If left unspecified (i.e., `None`), it will default to `settings.showToolbar`.
 * `maximized`: `[bool]` = `False` &rarr; Whether or not the layout should be maximized.

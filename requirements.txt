@@ -3,5 +3,5 @@ tiktoken
 configobj
 websockets
 asyncio
-cave_utils
+cave_utils==2.1.2
 pamda
