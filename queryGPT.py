@@ -174,8 +174,8 @@ def locate_path(path_string, top_level_key):
                 else:
                     index = re.search("\[[0-9]\]", list_path[i])
                     if index is not None:
-                        final_path.append(list_path[i].replace(index.match, ''))
-                        final_path.append(int(index.match.strip(string.ascii_letters)))
+                        final_path.append(list_path[i].replace(index.group(), ''))
+                        final_path.append(int(index.group().strip("[]")))
                     else:
                         final_path.append(list_path[i])
             given_path['path'] = final_path
