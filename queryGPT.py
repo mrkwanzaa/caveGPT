@@ -192,7 +192,7 @@ def find_prompt_test(prompt):
         if test['command'] == prompt:
             return test
 
-prompts_dict = read_json_file('Llama3Prompts.json')
+prompts_dict = read_json_file('MixtralPrompts.json')
 results = {}
 passed = 0
 if __name__ == '__main__':
@@ -204,7 +204,7 @@ if __name__ == '__main__':
             error = False
             # accept command
             # command = input('Command: ')
-            for k in range(5):
+            for k in range(1):
                 try:
                     old_api_key = None
                     for i in range(2):
@@ -258,5 +258,5 @@ if __name__ == '__main__':
                 print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
-    with open('GptonLlamaresults.json', 'w') as f:
+    with open('GptonMixtralresults.json', 'w') as f:
         json.dump(results, f)
