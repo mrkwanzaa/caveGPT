@@ -192,7 +192,7 @@ def find_prompt_test(prompt):
         if test['command'] == prompt:
             return test
 
-prompts_dict = read_json_file('MixtralPrompts.json')
+prompts_dict = read_json_file('QwenPrompts.json')
 results = {}
 passed = 0
 if __name__ == '__main__':
@@ -258,5 +258,5 @@ if __name__ == '__main__':
                 print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
-    with open('GptonMixtralresults.json', 'w') as f:
+    with open('GptonQwenresults.json', 'w') as f:
         json.dump(results, f)
