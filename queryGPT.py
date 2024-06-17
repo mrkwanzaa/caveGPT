@@ -2,16 +2,12 @@
 import os
 import json
 import re
-import string
-from time import sleep
-from pamda import pamda
 from cave_utils.api_utils.validator import Validator
 from copy import deepcopy
 import os
 from openai import OpenAI
 import configobj
 import tiktoken
-from time import sleep
 import json
 
 config = configobj.ConfigObj('.env')
@@ -49,7 +45,7 @@ def get_api():
             api_message = f.read()
     return api_message
 
-def query_model(system, user, json):
+def query_model(system, user, n, json):
     output = client.chat.completions.create(
         model=model,
         messages=[
@@ -59,11 +55,13 @@ def query_model(system, user, json):
             },
             {"role": "user", "content": user},
         ],
+        n=n,
         response_format={
                 "type": "json_object",
             } if json else None,
     )
-    return output.choices[0].message.content
+    outputs = [item.message.content for item in output.choices]
+    return outputs[0] if n == 1 else outputs
 
 
 
@@ -73,6 +71,7 @@ def find_top_level_key(command, error):
     result = query_model(
         message,
         '"""' + docs_by_name['index'] + '""" \n\n' + 'request: ' + command,
+        1,
         False
     )
     result = result.replace('\n', '')
@@ -115,6 +114,7 @@ def find_mutation_path(chunks, error):
         result = query_model(
            message,
            data,
+           10,
            True
         )
         if not 'Not possible' in result:
@@ -204,59 +204,57 @@ if __name__ == '__main__':
             error = False
             # accept command
             # command = input('Command: ')
-            for k in range(1):
-                try:
-                    old_api_key = None
-                    for i in range(2):
-                        api = json.loads(get_api())
-                        print('Finding top level key...')
-                        top_level_key = find_top_level_key(command, error)
-                        print(top_level_key)
-                        if top_level_key not in api['data'].keys():
-                            error = f'{top_level_key} is not an acceptable key.'
-                        else:
-                            print('Chunking api...')
-                            api_chunks = chunk_into_messages(command, top_level_key, api)
-                            print('Finding mutation path...')
-                            if old_api_key != top_level_key:
-                                error = False
-                            result = find_mutation_path(api_chunks, error)
-                            print(result)
+            try:
+                old_api_key = None
+                for i in range(2):
+                    if success:
+                        break
+                    api = json.loads(get_api())
+                    print('Finding top level key...')
+                    top_level_key = find_top_level_key(command, error)
+                    print(top_level_key)
+                    if top_level_key not in api['data'].keys():
+                        error = f'{top_level_key} is not an acceptable key.'
+                    else:
+                        print('Chunking api...')
+                        api_chunks = chunk_into_messages(command, top_level_key, api)
+                        print('Finding mutation path...')
+                        if old_api_key != top_level_key:
+                            error = False
+                        model_result = find_mutation_path(api_chunks, error)
+                        print(model_result)
+                        for result in model_result:
                             paths = locate_path(result, top_level_key)
                             print(paths)
                             print('Validating mutation')
-                            api = api['data']
+                            api = json.loads(get_api())['data']
                             for path in paths:
                                 try:
                                     api = set_path(path['path'], path['value'], api)
                                 except:
                                     print(f'Json failed: {path}')
+
+                            expected = find_prompt_test(prompt)
+
+                            if follow_path(expected['path'], api) == expected['value']:
+                                success = True
+                                break
+
                             validator = Validator(api)
                             logs = validator.log.get_logs()
                             if len(logs) > 0:
                                 error = logs[0]['msg']
                                 print(logs)
                                 print(f'Error encountered, attempting self correction')
-                            else:
-                                error = False
-                                break
-                    result = set_path(path['path'], path['value'], api)
-                    expected = find_prompt_test(prompt)
 
-                    if follow_path(expected['path'], api) == expected['value']:
-                        success = True
-                        break
-                    else:
-                        if error:
-                            print('caught error')
-                        else:
-                            print('uncaught error')
-                except Exception as e: 
-                    print(e)
+            except Exception as e:
+                print('Error!') 
+                print(e)
             results[prompt][command] = success
             if success:
                 print('Success!')
             # send_mutations(path, top_level_key, api['verions'])
     # save results to results.json
-    with open('GptonQwenresults.json', 'w') as f:
+    with open('GPTonQwenresults.json', 'w') as f:
         json.dump(results, f)
+
