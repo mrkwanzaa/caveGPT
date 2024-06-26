@@ -1,0 +1,46 @@
+level,prompt,Gpt,Llama,Mixtral,Qwen
+k1results,Color the country geo by learners,3,0,1,2
+k1results,Hide the country geo from the map,2,1,0,0
+k1results,Color the partner nodes by partner type,4,7,8,5
+k1results,Hide the Scale Centers nodes from the map,10,10,10,10
+k1results,Switch to the statistics dashboard,5,3,1,5
+k1results,Change the pass rate chart to verification rate,0,0,0,0
+k1results,Change the bottom right chart to show verification rate,0,0,0,0
+k1results,Open the settings pane,0,0,0,0
+k1results,Change the first chart to show total enrollments by year,0,0,0,0
+k1results,Change the top left chart to show total enrollments by year,0,0,0,0
+k1results,Change the credentials earned chart to a line chart,0,0,0,0
+k1results,Activate demo mode,0,0,0,0
+k1results,Remove the last chart,0,0,0,0
+k1results,Remove all the charts,0,0,0,0
+k1results,Open the United States country model,0,0,0,0
+k5results,Color the country geo by learners,3,0,1,3
+k5results,Hide the country geo from the map,2,3,0,0
+k5results,Color the partner nodes by partner type,4,7,8,5
+k5results,Hide the Scale Centers nodes from the map,10,10,10,10
+k5results,Switch to the statistics dashboard,5,3,2,5
+k5results,Change the pass rate chart to verification rate,0,0,0,0
+k5results,Change the bottom right chart to show verification rate,0,0,0,0
+k5results,Open the settings pane,0,0,0,0
+k5results,Change the first chart to show total enrollments by year,0,0,0,0
+k5results,Change the top left chart to show total enrollments by year,0,0,0,0
+k5results,Change the credentials earned chart to a line chart,0,0,0,0
+k5results,Activate demo mode,0,0,0,0
+k5results,Remove the last chart,0,0,0,0
+k5results,Remove all the charts,0,1,0,0
+k5results,Open the United States country model,0,0,0,0
+k10results,Color the country geo by learners,3,1,1,3
+k10results,Hide the country geo from the map,2,3,0,0
+k10results,Color the partner nodes by partner type,4,7,8,6
+k10results,Hide the Scale Centers nodes from the map,10,10,10,10
+k10results,Switch to the statistics dashboard,5,3,2,5
+k10results,Change the pass rate chart to verification rate,0,0,0,0
+k10results,Change the bottom right chart to show verification rate,0,0,0,0
+k10results,Open the settings pane,0,0,0,0
+k10results,Change the first chart to show total enrollments by year,0,0,0,0
+k10results,Change the top left chart to show total enrollments by year,0,0,0,0
+k10results,Change the credentials earned chart to a line chart,0,0,0,0
+k10results,Activate demo mode,0,0,0,0
+k10results,Remove the last chart,0,0,0,0
+k10results,Remove all the charts,0,0,0,0
+k10results,Open the United States country model,0,0,0,0
